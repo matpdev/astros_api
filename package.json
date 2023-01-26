@@ -1,0 +1,26 @@
+{
+  "name": "bike-api",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^4.7.1",
+    "@supabase/supabase-js": "^2.4.1",
+    "axios": "^1.2.3",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^8.5.1",
+    "moment": "^2.29.4",
+    "nodemailer": "^6.8.0",
+    "nodemon": "^2.0.20",
+    "pagarme": "^4.29.0",
+    "socket.io": "^4.5.4"
+  },
+  "devDependencies": {
+    "prisma": "^4.6.1"
+  }
+}
