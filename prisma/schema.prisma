@@ -8,32 +8,98 @@ datasource db {
 }
 
 model User {
-  id               Int       @id @default(autoincrement())
-  email            String?   @unique
-  password         String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  firstName        String?
-  lastName         String?
-  document         String?
-  phone            String?
-  state            String?
-  city             String?
-  district         String?
-  address          String?
-  number           String?
-  zipcode          String?
+  id        Int      @id @default(autoincrement())
+  email     String?  @unique
+  password  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name         String?
+  document     String?
+  documentType String?
+  birthDate    String?
+  description  String?
+  openingYear  String?
+  phone        String?
+  state        String?
+  city         String?
+  lat          Float?
+  long         Float?
+  district     String?
+  address      String?
+  number       String?
+  zipcode      String?
+  imageIcon    String?
+  gender       String?
+
   roleTypeId       Int
   deletedAt        DateTime?
-  imageIcon        String?
   integrationToken String?
   plataform        String?
-  roleType         RoleType  @relation(fields: [roleTypeId], references: [id])
-  errors           Errors[]
-  notification     Boolean   @default(true)
-  artist           Artist?   @relation(fields: [artistId], references: [id])
-  artistId         Int?
-  orders           Orders[]
+
+  pagarmeId     String?
+  houseCapacity Int?
+
+  roleType     RoleType   @relation(fields: [roleTypeId], references: [id])
+  errors       Errors[]
+  notification Boolean    @default(true)
+  artist       Artist?    @relation(fields: [artistId], references: [id])
+  artistId     Int?
+  orders       Orders[]
+  Rooms        Rooms[]
+  Messages     Messages[]
+}
+
+model Artist {
+  id           Int      @id @default(autoincrement())
+  fantasyName  String?
+  transferFee  Float
+  cacheMin     Float
+  cacheMax     Float
+  rank         Float?
+  icon         String?
+  isAccepting  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  type         Json
+  style        Json
+  artistTypeId Int?
+
+  instagramLink String?
+  facebookLink  String?
+  tikTokLink    String?
+  spotifyLink   String?
+  websiteLink   String?
+  youtubeLink   String?
+
+  account      String
+  agency       String
+  bank         String
+  account_type String
+
+  dates       Dates[]
+  user        User[]
+  orders      Orders[]
+  extras      Extras[]
+  Rooms       Rooms[]
+  ArtistType  ArtistType? @relation(fields: [artistTypeId], references: [id])
+  styleTypeId StyleType[]
+}
+
+model ArtistType {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  artist    Artist[]
+}
+
+model StyleType {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  artist    Artist[]
 }
 
 model Errors {
@@ -50,35 +116,6 @@ model RoleType {
   id   Int    @id @default(autoincrement())
   name String
   user User[]
-}
-
-model Artist {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  fantasyName String
-  transferFee Float
-  cacheMin    Float
-  cacheMax    Float
-  lat         Float
-  long        Float
-  rank        Float?
-  city        String?
-  uf          String?
-  district    String?
-  address     String?
-  number      String?
-  icon        String?
-  isAccepting Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  type        Json
-  style       Json
-
-  dates  Dates[]
-  user   User[]
-  orders Orders[]
-  extras Extras[]
 }
 
 // instrumentId Int
@@ -109,25 +146,17 @@ model Dates {
   artistId Int?
 }
 
-//? Sem uso no momento
-
-// model Instrument {
-//   id        Int      @id @default(autoincrement())
-//   name      String
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//   artist    Artist[]
-// }
-
 //! Lembrar no sistema de Orders com Metodo de Pagamento
 
 model Orders {
-  id         Int    @id @default(autoincrement())
-  logGateway Json
-  voucherId  Int?
-  valueTotal Float
-  dates      Json
-  status     Status
+  id             Int     @id @default(autoincrement())
+  logGateway     Json
+  voucherId      Int?
+  valueTotal     Float
+  dates          Json
+  status         Status
+  orderPagarmeId String?
+  codePagarme    String?
 
   userId   Int
   artistId Int
@@ -147,4 +176,27 @@ model Extras {
   value       Float
   Artist      Artist? @relation(fields: [artistId], references: [id])
   artistId    Int?
+}
+
+model Messages {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  roomsId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  rooms Rooms @relation(fields: [roomsId], references: [id])
+}
+
+//! Trocar ID da Sala para UUID
+model Rooms {
+  id           String  @id @default(uuid())
+  userIdClient Int
+  userIdArtist Int
+  isOpen       Boolean @default(true)
+
+  user     User       @relation(fields: [userIdClient], references: [id])
+  artist   Artist     @relation(fields: [userIdArtist], references: [id])
+  messages Messages[]
 }

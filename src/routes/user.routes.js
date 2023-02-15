@@ -47,7 +47,6 @@ module.exports = function (app) {
 
   app.post("/user/artist", async (req, res) => {
     const {
-      name,
       description,
       fantasyName,
       transferFee,
@@ -55,15 +54,20 @@ module.exports = function (app) {
       cacheMax,
       lat,
       long,
-      city,
-      uf,
-      district,
-      address,
-      number,
       icon,
-      isAccepting,
       type,
       style,
+      account,
+      agency,
+      bank,
+      account_type,
+      instagramLink,
+      facebookLink,
+      tikTokLink,
+      spotifyLink,
+      websiteLink,
+      youtubeLink,
+      artistTypeId,
     } = req.body;
 
     if (!req.headers.authorization) {
@@ -94,23 +98,17 @@ module.exports = function (app) {
       if (user.artist == null) {
         const artistData = await prisma.artist.create({
           data: {
-            name,
-            description,
-            fantasyName,
             transferFee,
             cacheMin,
             cacheMax,
-            lat,
-            long,
-            city,
-            uf,
-            district,
-            address,
-            number,
             icon,
-            isAccepting,
             type,
             style,
+            artistTypeId: artistTypeId || 1,
+            account,
+            agency,
+            bank,
+            account_type,
           },
         });
 
@@ -120,6 +118,16 @@ module.exports = function (app) {
           },
           data: {
             artistId: artistData.id,
+            fantasyName,
+            description,
+            lat,
+            long,
+            instagramLink,
+            facebookLink,
+            tikTokLink,
+            spotifyLink,
+            websiteLink,
+            youtubeLink,
             roleTypeId: 2,
           },
           include: {

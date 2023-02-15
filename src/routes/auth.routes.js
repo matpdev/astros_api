@@ -3,235 +3,407 @@ require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 let bcrypt = require("bcryptjs"),
   jwt = require("jsonwebtoken");
+const { signUserInPagarme } = require("../utils/utils");
 const prisma = new PrismaClient();
+const moment = require("moment");
+
+const authorization = Buffer.from(
+  `${process.env.PAGARME_TEST_TOKEN}:`
+).toString("base64");
 
 module.exports = function (app) {
   app.post(`/signup`, async (req, res) => {
     const {
-      firstName,
-      lastName,
       email,
       password,
-      imageIcon,
-      roleTypeId,
-      isGFA,
-      document,
-      phone,
-      integrationToken,
-      plataform,
-      cityUser,
-      ufUser,
-      districtUser,
-      addressUser,
-      numberUser,
-
-      isArtist,
       name,
+      document,
+      birthDate,
       description,
-      fantasyName,
-      transferFee,
-      cacheMin,
-      cacheMax,
+      openingYear,
+      phone,
+      state,
+      city,
       lat,
       long,
-      city,
-      uf,
       district,
       address,
       number,
+      zipcode,
+      imageIcon,
+      instagramLink,
+      facebookLink,
+      tikTokLink,
+      spotifyLink,
+      websiteLink,
+      youtubeLink,
+      integrationToken,
+      plataform,
+      houseCapacity,
+      isArtist,
+      transferFee,
+      cacheMin,
+      cacheMax,
+      rank,
       icon,
       isAccepting,
+      createdAt,
+      updatedAt,
+      fantasyName,
       type,
       style,
-      zipcode,
-      zipcodeUser,
+      artistTypeId,
+      account,
+      agency,
+      bank,
+      account_type,
+      gender,
+      documentType,
     } = req.body;
 
-    if (!isGFA) {
-      if (isArtist) {
-        if (!firstName && !lastName) {
-          return res.status(403).json("Necessário ter um nome!");
-        }
-
-        let userExist = await prisma.user.findUnique({
-          where: {
-            email,
-          },
-        });
-
-        if (!userExist) {
-          const artistData = await prisma.artist.create({
-            data: {
-              name,
-              description,
-              fantasyName,
-              transferFee,
-              cacheMin,
-              cacheMax,
-              lat,
-              long,
-              city,
-              uf,
-              district,
-              address,
-              number,
-              icon,
-              isAccepting,
-              type,
-              style,
-            },
-          });
-          const result = await prisma.user.create({
-            data: {
-              firstName,
-              lastName,
-              email,
-              password: bcrypt.hashSync(password, 10),
-              roleTypeId: +roleTypeId || 1,
-              imageIcon,
-              artistId: artistData.id,
-              district: districtUser,
-              address: addressUser,
-              number: numberUser,
-              zipcode: zipcodeUser,
-              state: ufUser,
-              city: cityUser,
-              phone,
-              document,
-            },
-            include: {
-              artist: true,
-            },
-          });
-          return res.json({
-            id: result.id,
-            firstName: result.firstName,
-            lastName: result.lastName,
-            email: result.email,
-            roleTypeId: result.roleTypeId,
-            imageIcon: result.imageIcon,
-            district: result.district,
-            address: result.address,
-            number: result.number,
-            zipcode: result.zipcode,
-            state: result.state,
-            city: result.city,
-            artist: result.artist,
-            jwt: jwt.sign({ id: result.id }, process.env.SECRET, {
-              expiresIn: 86400,
-            }),
-          });
-        } else {
-          return res.status(409).json("Usuário Já Existe com este Email");
-        }
-      } else {
-        if (!firstName && !lastName) {
-          return res.status(403).json("Necessário ter um nome!");
-        }
-
-        let userExist = await prisma.user.findUnique({
-          where: {
-            email,
-          },
-        });
-
-        if (!userExist) {
-          const result = await prisma.user.create({
-            data: {
-              firstName,
-              lastName,
-              email,
-              password: bcrypt.hashSync(password, 10),
-              roleTypeId: +roleTypeId || 1,
-              imageIcon,
-              district: districtUser,
-              address: addressUser,
-              number: numberUser,
-              zipcode: zipcodeUser,
-              state: ufUser,
-              city: cityUser,
-            },
-          });
-          return res.json({
-            id: result.id,
-            firstName: result.firstName,
-            lastName: result.lastName,
-            email: result.email,
-            district: result.district,
-            address: result.address,
-            number: result.number,
-            zipcode: result.zipcode,
-            state: result.state,
-            city: result.city,
-            roleTypeId: result.roleTypeId,
-            imageIcon: result.imageIcon,
-            jwt: jwt.sign({ id: result.id }, process.env.SECRET, {
-              expiresIn: 86400,
-            }),
-          });
-        } else {
-          return res.status(409).json("Usuário Já Existe com este Email");
-        }
-      }
-    } else {
-      let userExist = await prisma.user.findFirst({
+    try {
+      const userData = await prisma.user.findFirst({
         where: {
-          OR: [
-            {
-              email,
-              integrationToken,
-            },
-            {
-              integrationToken,
-            },
-          ],
+          email,
         },
       });
 
-      if (!userExist) {
-        const result = await prisma.user.create({
+      if (!userData) {
+        let artistId = null;
+
+        if (isArtist) {
+          artistId = (
+            await prisma.artist.create({
+              data: {
+                transferFee,
+                cacheMin,
+                cacheMax,
+                rank,
+                icon,
+                isAccepting,
+                createdAt,
+                updatedAt,
+                type,
+                style,
+                artistTypeId: artistTypeId || 1,
+                account,
+                agency,
+                bank,
+                account_type,
+                instagramLink,
+                facebookLink,
+                tikTokLink,
+                spotifyLink,
+                websiteLink,
+                youtubeLink,
+                fantasyName,
+              },
+            })
+          ).id;
+        }
+
+        const userData = await prisma.user.create({
           data: {
-            firstName,
-            lastName,
             email,
+            password: bcrypt.hashSync(password, 10),
+            name,
+            document,
+            birthDate,
+            description,
+            openingYear,
+            phone,
+            state,
+            city,
+            lat,
+            long,
+            district,
+            address,
+            number,
+            zipcode,
             imageIcon,
-            roleTypeId: +roleTypeId || 1,
-            plataform,
             integrationToken,
+            plataform,
+            houseCapacity,
+            roleTypeId: 1,
+            artistId: artistId,
+            documentType: documentType,
+            gender,
+          },
+          include: {
+            artist: artistId != null ? true : false,
           },
         });
-        return res.json({
-          id: result.id,
-          firstName: result.firstName,
-          lastName: result.lastName,
-          email: result.email,
-          integrationToken: integrationToken,
-          roleTypeId: result.roleTypeId,
-          imageIcon: result.imageIcon,
-          jwt: jwt.sign({ id: result.id }, process.env.SECRET, {
-            expiresIn: 86400,
-          }),
-        });
+
+        if (userData) {
+          const data = await signUserInPagarme({
+            name: userData.name,
+            email: userData.email,
+            userId: userData.id,
+            document: userData.document,
+            documenttype: userData.documentType,
+            typeUser: isArtist ? "company" : "individual",
+            gender: userData.gender,
+            country: "BR",
+            state: userData.state,
+            city: userData.city,
+            zipcode: userData.zipcode.replace(/\D/, ""),
+            address: userData.address,
+            birthdate: moment(new Date(userData.birthDate)).format(
+              "MM/DD/YYYY"
+            ),
+            number: userData.phone.replace(/\D/, "").substring(2),
+            areacode: userData.phone.replace(/\D/, "").substring(0, 2),
+            countrycode: "55",
+            authorization: authorization,
+          });
+
+          await prisma.user.update({
+            where: {
+              id: userData.id,
+            },
+            data: {
+              pagarmeId: data.data.id,
+            },
+          });
+
+          return res.json({
+            email: userData.email,
+            name: userData.name,
+            document: userData.document,
+            fantasyName: userData.fantasyName,
+            birthDate: userData.birthDate,
+            description: userData.description,
+            openingYear: userData.openingYear,
+            phone: userData.phone,
+            state: userData.state,
+            city: userData.city,
+            lat: userData.lat,
+            long: userData.long,
+            district: userData.district,
+            address: userData.address,
+            number: userData.number,
+            zipcode: userData.zipcode,
+            imageIcon: userData.imageIcon,
+            instagramLink: userData.instagramLink,
+            facebookLink: userData.facebookLink,
+            tikTokLink: userData.tikTokLink,
+            spotifyLink: userData.spotifyLink,
+            websiteLink: userData.websiteLink,
+            youtubeLink: userData.youtubeLink,
+            roleTypeId: userData.roleTypeId,
+            houseCapacity: userData.roleTypeId,
+            gender: userData.gender,
+            notification: true,
+            artistId: userData.artistId,
+            artist: userData.artistId != null ? userData.artist : null,
+          });
+        } else {
+          return res
+            .status(401)
+            .json({ Code: 401, Message: "Ocorreu um erro na criação" });
+        }
       } else {
-        return res.json({
-          id: userExist.id,
-          firstName: userExist.firstName,
-          lastName: userExist.lastName,
-          email: userExist.email,
-          district: result.district,
-          address: result.address,
-          number: result.number,
-          zipcode: result.zipcode,
-          state: result.state,
-          city: result.city,
-          integrationToken: integrationToken,
-          roleTypeId: userExist.roleTypeId,
-          imageIcon: userExist.imageIcon,
-          jwt: jwt.sign({ id: userExist.id }, process.env.SECRET, {
-            expiresIn: 86400,
-          }),
-        });
+        return res
+          .status(409)
+          .json({ Code: 409, Message: "Usuário Já Existe" });
       }
+    } catch (error) {
+      console.log(error.response);
+      return res.status(400).json("Ocorreu um erro interno");
+    }
+  });
+
+  app.post(`/signup/plataform`, async (req, res) => {
+    const {
+      email,
+      name,
+      document,
+      birthDate,
+      description,
+      openingYear,
+      phone,
+      state,
+      city,
+      lat,
+      long,
+      district,
+      address,
+      number,
+      zipcode,
+      imageIcon,
+      instagramLink,
+      facebookLink,
+      tikTokLink,
+      spotifyLink,
+      websiteLink,
+      youtubeLink,
+      integrationToken,
+      plataform,
+      houseCapacity,
+      isArtist,
+      transferFee,
+      cacheMin,
+      cacheMax,
+      rank,
+      icon,
+      isAccepting,
+      fantasyName,
+      type,
+      style,
+      artistTypeId,
+      account,
+      agency,
+      bank,
+      account_type,
+    } = req.body;
+
+    try {
+      const userData = await prisma.user.findFirst({
+        where: {
+          email,
+        },
+      });
+
+      if (!userData) {
+        let artistId = null;
+
+        if (isArtist) {
+          artistId = (
+            await prisma.artist.create({
+              data: {
+                transferFee,
+                cacheMin,
+                cacheMax,
+                rank,
+                icon,
+                isAccepting,
+                type,
+                style,
+                artistTypeId: artistTypeId || 1,
+                account,
+                agency,
+                bank,
+                account_type,
+                fantasyName,
+                instagramLink,
+                facebookLink,
+                tikTokLink,
+                spotifyLink,
+                websiteLink,
+                youtubeLink,
+              },
+            })
+          ).id;
+        }
+
+        const userData = await prisma.user.create({
+          data: {
+            email,
+            name,
+
+            document,
+            birthDate,
+            description,
+            openingYear,
+            phone,
+            state,
+            city,
+            lat,
+            long,
+            district,
+            address,
+            number,
+            zipcode,
+            imageIcon,
+
+            integrationToken,
+            plataform,
+            houseCapacity,
+            roleTypeId: 1,
+            artistId: artistId,
+          },
+          include: {
+            artist: artistId != null ? true : false,
+          },
+        });
+
+        if (userData) {
+          const data = await signUserInPagarme({
+            name: userData.name,
+            email: userData.email,
+            userId: userData.id,
+            document: userData.document.replace(/\D/, ""),
+            documenttype: userData.documentType,
+            typeUser: isArtist ? "company" : "individual",
+            gender: userData.gender,
+            country: "BR",
+            state: userData.state,
+            city: userData.city,
+            zipcode: userData.zipcode.replace(/\D/, ""),
+            address: userData.address,
+            birthdate: moment(new Date(userData.birthDate)).format(
+              "MM/DD/YYYY"
+            ),
+            number: userData.phone.replace(/\D/, "").substring(2),
+            areacode: userData.phone.replace(/\D/, "").substring(0, 2),
+            countrycode: "55",
+            authorization: authorization,
+          });
+
+          await prisma.user.update({
+            where: {
+              id: userData.id,
+            },
+            data: {
+              pagarmeId: data.data.id,
+            },
+          });
+
+          return res.json({
+            email: userData.email,
+            name: userData.name,
+            document: userData.document.replace(/\D/, ""),
+            fantasyName: userData.fantasyName,
+            birthDate: userData.birthDate,
+            description: userData.description,
+            openingYear: userData.openingYear,
+            phone: userData.phone,
+            state: userData.state,
+            city: userData.city,
+            lat: userData.lat,
+            long: userData.long,
+            district: userData.district,
+            address: userData.address,
+            number: userData.number,
+            zipcode: userData.zipcode,
+            imageIcon: userData.imageIcon,
+            instagramLink: userData.instagramLink,
+            facebookLink: userData.facebookLink,
+            tikTokLink: userData.tikTokLink,
+            spotifyLink: userData.spotifyLink,
+            websiteLink: userData.websiteLink,
+            youtubeLink: userData.youtubeLink,
+            roleTypeId: userData.roleTypeId,
+            houseCapacity: userData.roleTypeId,
+            notification: true,
+            artistId: userData.artistId,
+            artist: userData.artistId != null ? userData.artist : null,
+            integrationToken: userData.integrationToken,
+            plataform: userData.plataform,
+          });
+        } else {
+          return res
+            .status(400)
+            .json({ Code: 400, Message: "Erro ao cadastrar" });
+        }
+      } else {
+        return res
+          .status(409)
+          .json({ Code: 409, Message: "Usuário Já Existe" });
+      }
+    } catch (error) {
+      console.log();
+      return res.json({ Code: 400, Message: error.response.data.errors });
     }
   });
 
@@ -243,9 +415,17 @@ module.exports = function (app) {
         where: {
           email,
         },
+        include: {
+          artist: true,
+        },
       });
 
       if (userExist) {
+        if (userExist.password == null) {
+          return res
+            .status(404)
+            .json({ Code: 404, Message: "Usuário não encontrado" });
+        }
         if (userExist.deletedAt == null) {
           const result = bcrypt.compareSync(password, userExist.password);
           if (!result) {
@@ -259,21 +439,21 @@ module.exports = function (app) {
             });
             return res.status(200).send({
               id: userExist.id,
-              firstName: userExist.firstName,
-              lastName: userExist.lastName,
+              name: userExist.name,
               email: userExist.email,
               jwt: token,
+              artist: userExist.artist,
               roleTypeId: userExist.roleTypeId,
             });
           }
         } else {
           return res
-            .status(409)
+            .status(404)
             .json({ Message: "Usuário não existe", Code: 404 });
         }
       } else {
         return res
-          .status(409)
+          .status(404)
           .json({ Message: "Email incorreto ou não encontrado", Code: 404 });
       }
     } else {
@@ -304,12 +484,12 @@ module.exports = function (app) {
           });
         } else {
           return res
-            .status(409)
+            .status(404)
             .json({ Message: "Usuário não existe", Code: 404 });
         }
       } else {
         return res
-          .status(409)
+          .status(404)
           .json({ Message: "Email incorreto ou não encontrado", Code: 404 });
       }
     }

@@ -3,25 +3,70 @@ require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 let bcrypt = require("bcryptjs"),
   jwt = require("jsonwebtoken");
-const { calculateDistance } = require("../utils/utils");
+const { calculateDistance, signUserInPagarme } = require("../utils/utils");
 const prisma = new PrismaClient(),
   nodemailer = require("nodemailer");
 
 const pagarme = require("pagarme");
+const { default: axios } = require("axios");
+
+const authorization = Buffer.from(
+  `${process.env.PAGARME_TEST_TOKEN}:`
+).toString("base64");
 
 module.exports = function (app) {
   app.post("/payment/test", async (req, res) => {
-    const client = await pagarme.client.connect({
-      api_key: process.env.PAGARME_TOKEN,
-    });
+    /* 
+    body: JSON.stringify({
+    items: [{amount: 2990, description: 'Chaveiro do Tesseract', quantity: 1, code: '1'}],
+    shipping: {
+      address: {
+        line_1: '10880, Malibu Point, Malibu Central',
+        zip_code: '90265',
+        city: 'Malibu',
+        state: 'CA',
+        country: 'US'
+      },
+      amount: 100,
+      description: 'Stark',
+      recipient_name: 'Tony Stark',
+      recipient_phone: '24586787867'
+    },
+    payments: [
+      {
+        credit_card: {
+          card: {
+            billing_address: {
+              line_1: '10880, Malibu Point, Malibu Central',
+              zip_code: '90265',
+              city: 'Malibu',
+              state: 'CA',
+              country: 'US'
+            },
+            number: '4000000000000010',
+            holder_name: 'Tony Stark',
+            exp_month: 1,
+            exp_year: 30,
+            cvv: '3531'
+          },
+          recurrence: false,
+          installments: 1,
+          statement_descriptor: 'AVENGERS'
+        },
+        payment_method: 'credit_card'
+      }
+    ],
+    device: {platform: 'ANDROID OS'},
+    location: {latitude: '-22.970722', longitude: '43.182365'},
+    antifraud: {type: 'clearsale', clearsale: {custom_sla: '90'}},
+    ip: '52.168.67.32',
+    session_id: '322b821a',
+    customer_id: 'cus_qGpWvg2H0jIedVxv'
+  })
+    
+    */
 
-    const transaction = await client.transactions
-      .create(req.body)
-      .catch((e) => {
-        console.log(e);
-      });
-
-    return res.json({ message: "Sucess", data: transaction });
+    return res.json({ message: "Sucess", data: data.data });
   });
 
   app.post("/payment/checkout", async (req, res) => {
@@ -35,6 +80,8 @@ module.exports = function (app) {
       cardExpiration,
       cardCVV,
       cardNumber,
+      installments,
+      type,
     } = req.body;
 
     if (!req.headers.authorization) {
@@ -55,9 +102,12 @@ module.exports = function (app) {
         });
       }
 
-      const artist = await prisma.artist.findUnique({
+      const artist = await prisma.user.findUnique({
         where: {
           id: artistId,
+        },
+        include: {
+          artist: true,
         },
       });
 
@@ -85,70 +135,93 @@ module.exports = function (app) {
           long1: lon,
           lat2: artist.lat,
           long2: artist.long,
-        }) * artist.transferFee
+        }) * artist.artist.transferFee
       ).toFixed(2);
 
       let valueTotal =
-        Number(valueExtras) + Number(shippingVal) + Number(artist.cacheMax);
+        Number(valueExtras) +
+        Number(shippingVal) +
+        Number(artist.artist.cacheMax);
 
-      let sendDataTransaction = {
-        amount: (valueTotal * 100).toString(),
-        card_holder_name: cardName,
-        card_expiration_date: cardExpiration,
-        card_cvv: cardCVV,
-        card_number: cardNumber,
-        customer: {
-          name: `${userData.firstName} ${userData.lastName}`,
-          external_id: "#3311",
-          email: userData.email,
-          type: "individual",
-          country: "br",
-          phone_numbers: [`+55${userData.phone}`],
-          documents: [{ type: "cpf", number: userData.document }],
-        },
-        billing: {
-          name: `${userData.firstName} ${userData.lastName}`,
-          address: {
-            country: "br",
-            state: userData.state,
-            city: userData.city,
-            neighborhood: userData.district,
-            street: userData.address,
-            street_number: userData.number,
-            zipcode: userData.zipcode,
-          },
-        },
-        items: [
-          {
-            id: artist.id.toString(),
-            title: artist.fantasyName,
-            date: "2023-01-01",
-            unit_price: (valueTotal * 100).toString(),
-            quantity: 1,
-            tangible: false,
-          },
-        ],
-      };
+      console.log(artist, userData);
 
-      const client = await pagarme.client.connect({
-        api_key: process.env.PAGARME_TOKEN,
+      const data = await axios.post(
+        "https://api.pagar.me/core/v5/orders",
+        JSON.stringify(
+          type == "credit"
+            ? {
+                items: [
+                  {
+                    amount: (valueTotal * 100).toString(),
+                    description: artist.fantasyName,
+                    quantity: 1,
+                    code: artist.artist.id.toString(),
+                  },
+                ],
+                payments: [
+                  {
+                    credit_card: {
+                      card: {
+                        billing_address: {
+                          line_1: `${userData.number} - ${userData.address}`,
+                          zip_code: userData.zipcode,
+                          state: userData.state,
+                          city: userData.city,
+                          country: "br",
+                        },
+                        number: cardNumber,
+                        holder_name: cardName,
+                        exp_month: cardExpiration.substring(0, 2),
+                        exp_year: cardExpiration.substring(2, 4),
+                        cvv: cardCVV,
+                      },
+                      installments: installments,
+                      statement_descriptor: "AVENGERS",
+                    },
+                    payment_method: "credit_card",
+                  },
+                ],
+                customer_id: userData.pagarmeId,
+              }
+            : {
+                items: [
+                  {
+                    amount: (valueTotal * 100).toString(),
+                    description: artist.description,
+                    quantity: 1,
+                    code: artist.artist.id.toString(),
+                  },
+                ],
+                payments: [
+                  { Pix: { expires_in: 2000 }, payment_method: "pix" },
+                ],
+                customer_id: userData.pagarmeId,
+              }
+        ),
+        {
+          headers: {
+            accept: "application/json",
+            "content-type": "application/json",
+            authorization: "Basic " + authorization,
+          },
+        }
+      );
+
+      await prisma.orders.create({
+        data: {
+          logGateway: data.data,
+          valueTotal,
+          dates,
+          status: "PENDENTE",
+          userId: decoded.id,
+          artistId: artist.artist.id,
+          orderPagarmeId: data.data.id,
+          codePagarme: data.data.code,
+        },
       });
 
-      const transaction = await client.transactions.create(sendDataTransaction);
-
-      if (shippingVal && valueExtras) {
-        await prisma.orders.create({
-          data: {
-            logGateway: transaction,
-            valueTotal,
-            dates,
-            status: "PENDENTE",
-            userId: decoded.id,
-            artistId: artist.id,
-          },
-        });
-        return res.status(200).send(shippingVal.toString());
-      }
+      return res.status(200).send("Pedido concluído com Sucesso");
+      // }
     });
   });
 };
