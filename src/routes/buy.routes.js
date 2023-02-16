@@ -15,7 +15,7 @@ const authorization = Buffer.from(
 ).toString("base64");
 
 module.exports = function (app) {
-  app.post("/payment/test/:id", async (req, res) => {
+  app.post("/payment/test/", async (req, res) => {
     // await prisma.orders.update({
     //   where: {
     //     codePagarme: id,
@@ -111,7 +111,7 @@ module.exports = function (app) {
                   items: [
                     {
                       amount: (valueTotal * 100).toString(),
-                      description: artist.fantasyName,
+                      description: artist.description,
                       quantity: 1,
                       code: artist.artist.id.toString(),
                     },
@@ -180,7 +180,7 @@ module.exports = function (app) {
 
         return res.status(200).send("Pedido concluído com Sucesso");
       } catch (e) {
-        return res.status(400).json(e);
+        return res.status(400).json(e.response.data);
       }
     });
   });
