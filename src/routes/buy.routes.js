@@ -15,58 +15,17 @@ const authorization = Buffer.from(
 ).toString("base64");
 
 module.exports = function (app) {
-  app.post("/payment/test", async (req, res) => {
-    /* 
-    body: JSON.stringify({
-    items: [{amount: 2990, description: 'Chaveiro do Tesseract', quantity: 1, code: '1'}],
-    shipping: {
-      address: {
-        line_1: '10880, Malibu Point, Malibu Central',
-        zip_code: '90265',
-        city: 'Malibu',
-        state: 'CA',
-        country: 'US'
-      },
-      amount: 100,
-      description: 'Stark',
-      recipient_name: 'Tony Stark',
-      recipient_phone: '24586787867'
-    },
-    payments: [
-      {
-        credit_card: {
-          card: {
-            billing_address: {
-              line_1: '10880, Malibu Point, Malibu Central',
-              zip_code: '90265',
-              city: 'Malibu',
-              state: 'CA',
-              country: 'US'
-            },
-            number: '4000000000000010',
-            holder_name: 'Tony Stark',
-            exp_month: 1,
-            exp_year: 30,
-            cvv: '3531'
-          },
-          recurrence: false,
-          installments: 1,
-          statement_descriptor: 'AVENGERS'
-        },
-        payment_method: 'credit_card'
-      }
-    ],
-    device: {platform: 'ANDROID OS'},
-    location: {latitude: '-22.970722', longitude: '43.182365'},
-    antifraud: {type: 'clearsale', clearsale: {custom_sla: '90'}},
-    ip: '52.168.67.32',
-    session_id: '322b821a',
-    customer_id: 'cus_qGpWvg2H0jIedVxv'
-  })
-    
-    */
+  app.post("/payment/test/:id", async (req, res) => {
+    // await prisma.orders.update({
+    //   where: {
+    //     codePagarme: id,
+    //   },
+    //   data: {
+    //     status: "APROVADO",
+    //   },
+    // });
 
-    return res.json({ message: "Sucess", data: data.data });
+    return res.json({ message: "Sucess", data: req.body });
   });
 
   app.post("/payment/checkout", async (req, res) => {
@@ -143,85 +102,86 @@ module.exports = function (app) {
         Number(shippingVal) +
         Number(artist.artist.cacheMax);
 
-      console.log(artist, userData);
-
-      const data = await axios.post(
-        "https://api.pagar.me/core/v5/orders",
-        JSON.stringify(
-          type == "credit"
-            ? {
-                items: [
-                  {
-                    amount: (valueTotal * 100).toString(),
-                    description: artist.fantasyName,
-                    quantity: 1,
-                    code: artist.artist.id.toString(),
-                  },
-                ],
-                payments: [
-                  {
-                    credit_card: {
-                      card: {
-                        billing_address: {
-                          line_1: `${userData.number} - ${userData.address}`,
-                          zip_code: userData.zipcode,
-                          state: userData.state,
-                          city: userData.city,
-                          country: "br",
-                        },
-                        number: cardNumber,
-                        holder_name: cardName,
-                        exp_month: cardExpiration.substring(0, 2),
-                        exp_year: cardExpiration.substring(2, 4),
-                        cvv: cardCVV,
-                      },
-                      installments: installments,
-                      statement_descriptor: "AVENGERS",
+      try {
+        const data = await axios.post(
+          "https://api.pagar.me/core/v5/orders",
+          JSON.stringify(
+            type == "credit"
+              ? {
+                  items: [
+                    {
+                      amount: (valueTotal * 100).toString(),
+                      description: artist.fantasyName,
+                      quantity: 1,
+                      code: artist.artist.id.toString(),
                     },
-                    payment_method: "credit_card",
-                  },
-                ],
-                customer_id: userData.pagarmeId,
-              }
-            : {
-                items: [
-                  {
-                    amount: (valueTotal * 100).toString(),
-                    description: artist.description,
-                    quantity: 1,
-                    code: artist.artist.id.toString(),
-                  },
-                ],
-                payments: [
-                  { Pix: { expires_in: 2000 }, payment_method: "pix" },
-                ],
-                customer_id: userData.pagarmeId,
-              }
-        ),
-        {
-          headers: {
-            accept: "application/json",
-            "content-type": "application/json",
-            authorization: "Basic " + authorization,
+                  ],
+                  payments: [
+                    {
+                      credit_card: {
+                        card: {
+                          billing_address: {
+                            line_1: `${userData.number} - ${userData.address}`,
+                            zip_code: userData.zipcode,
+                            state: userData.state,
+                            city: userData.city,
+                            country: "br",
+                          },
+                          number: cardNumber,
+                          holder_name: cardName,
+                          exp_month: cardExpiration.substring(0, 2),
+                          exp_year: cardExpiration.substring(2, 4),
+                          cvv: cardCVV,
+                        },
+                        installments: installments,
+                        statement_descriptor: "AVENGERS",
+                      },
+                      payment_method: "credit_card",
+                    },
+                  ],
+                  customer_id: userData.pagarmeId,
+                }
+              : {
+                  items: [
+                    {
+                      amount: (valueTotal * 100).toString(),
+                      description: artist.description,
+                      quantity: 1,
+                      code: artist.artist.id.toString(),
+                    },
+                  ],
+                  payments: [
+                    { Pix: { expires_in: 2000 }, payment_method: "pix" },
+                  ],
+                  customer_id: userData.pagarmeId,
+                }
+          ),
+          {
+            headers: {
+              accept: "application/json",
+              "content-type": "application/json",
+              authorization: "Basic " + authorization,
+            },
+          }
+        );
+
+        await prisma.orders.create({
+          data: {
+            logGateway: data.data,
+            valueTotal,
+            dates,
+            status: "PENDENTE",
+            userId: decoded.id,
+            artistId: artist.artist.id,
+            orderPagarmeId: data.data.id,
+            codePagarme: data.data.code,
           },
-        }
-      );
+        });
 
-      await prisma.orders.create({
-        data: {
-          logGateway: data.data,
-          valueTotal,
-          dates,
-          status: "PENDENTE",
-          userId: decoded.id,
-          artistId: artist.artist.id,
-          orderPagarmeId: data.data.id,
-          codePagarme: data.data.code,
-        },
-      });
-
-      return res.status(200).send("Pedido concluído com Sucesso");
-      // }
+        return res.status(200).send("Pedido concluído com Sucesso");
+      } catch (e) {
+        return res.status(400).json(e);
+      }
     });
   });
 };
