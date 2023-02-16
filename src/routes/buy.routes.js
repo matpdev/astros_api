@@ -16,18 +16,20 @@ const authorization = Buffer.from(
 
 module.exports = function (app) {
   app.post("/payment/test/", async (req, res) => {
-    // await prisma.orders.update({
-    //   where: {
-    //     codePagarme: id,
-    //   },
-    //   data: {
-    //     status: "APROVADO",
-    //   },
-    // });
+    try {
+      await prisma.orders.update({
+        where: {
+          codePagarme: req.body.data.id,
+        },
+        data: {
+          status: req.body.data.status == "paid" ? "APROVADO" : "PENDENTE",
+        },
+      });
 
-    console.log(req.body);
-
-    return res.json({ message: "Sucess", data: req.body });
+      return res.json({ message: "Sucess", data: req.body });
+    } catch (e) {
+      return res.json(e);
+    }
   });
 
   app.post("/payment/checkout", async (req, res) => {
