@@ -25,6 +25,8 @@ module.exports = function (app) {
     //   },
     // });
 
+    console.log(req.body);
+
     return res.json({ message: "Sucess", data: req.body });
   });
 
