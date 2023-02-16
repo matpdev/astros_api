@@ -17,9 +17,17 @@ const authorization = Buffer.from(
 module.exports = function (app) {
   app.post("/payment/test/", async (req, res) => {
     try {
+      const dataId = (
+        await prisma.orders.findFirst({
+          where: {
+            orderPagarmeId: req.body.data.id,
+          },
+        })
+      ).id;
+
       await prisma.orders.update({
         where: {
-          codePagarme: req.body.data.id,
+          id: dataId,
         },
         data: {
           status: req.body.data.status == "paid" ? "APROVADO" : "PENDENTE",
