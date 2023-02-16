@@ -15,7 +15,7 @@ const authorization = Buffer.from(
 ).toString("base64");
 
 module.exports = function (app) {
-  app.post("/payment/test/", async (req, res) => {
+  app.post("/payment/update/", async (req, res) => {
     try {
       const dataId = (
         await prisma.orders.findFirst({

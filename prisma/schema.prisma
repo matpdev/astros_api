@@ -189,7 +189,6 @@ model Messages {
   rooms Rooms @relation(fields: [roomsId], references: [id])
 }
 
-//! Trocar ID da Sala para UUID
 model Rooms {
   id           String  @id @default(uuid())
   userIdClient Int

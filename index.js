@@ -48,6 +48,7 @@ app.get("/sendArtists", async (req, res) => {
 });
 
 io.on("connection", async (socket) => {
+  console.log(socket);
   const users = {};
 
   let userId = socket.request.headers.authorization;
