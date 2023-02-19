@@ -36,6 +36,7 @@ require("./src/routes/user.routes")(app);
 require("./src/routes/profile.routes")(app);
 require("./src/routes/artists.routes")(app);
 require("./src/routes/buy.routes")(app);
+require("./src/routes/chat.routes")(app);
 
 app.get("/", async (req, res) => {
   res.json("OK");
