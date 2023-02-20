@@ -84,6 +84,7 @@ model Artist {
   Rooms       Rooms[]
   ArtistType  ArtistType? @relation(fields: [artistTypeId], references: [id])
   styleTypeId StyleType[]
+  Messages    Messages[]
 }
 
 model ArtistType {
@@ -180,13 +181,16 @@ model Extras {
 
 model Messages {
   id        Int      @id @default(autoincrement())
-  userId    Int
+  userId    Int?
+  artistId  Int?
   roomsId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  message   String
 
-  user  User  @relation(fields: [userId], references: [id])
-  rooms Rooms @relation(fields: [roomsId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id])
+  artist Artist? @relation(fields: [artistId], references: [id])
+  rooms  Rooms   @relation(fields: [roomsId], references: [id])
 }
 
 model Rooms {

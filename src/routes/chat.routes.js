@@ -26,13 +26,17 @@ module.exports = function (app) {
           id: room,
         },
         include: {
-          messages: true,
+          messages: {
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
         },
       });
 
       if (roomExist) {
         const messages = roomExist.messages;
-        console.log(messages);
+        return res.json(messages);
       }
     });
   });
@@ -82,7 +86,14 @@ module.exports = function (app) {
     );
 
     jwt.verify(newAuthorization, process.env.SECRET, async (err, decoded) => {
-      console.log(userId, artistId);
+      await prisma.messages.create({
+        data: {
+          roomsId: room,
+          message: message,
+          userId,
+          artistId,
+        },
+      });
     });
   });
 };
