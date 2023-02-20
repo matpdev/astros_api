@@ -183,10 +183,10 @@ model Messages {
   id        Int      @id @default(autoincrement())
   userId    Int?
   artistId  Int?
+  message   String
   roomsId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  message   String
 
   user   User?   @relation(fields: [userId], references: [id])
   artist Artist? @relation(fields: [artistId], references: [id])

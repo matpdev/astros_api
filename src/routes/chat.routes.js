@@ -74,6 +74,8 @@ module.exports = function (app) {
   app.post("/chat/sendmessage", async (req, res) => {
     const { userId, artistId, message, room } = req.body;
 
+    console.log(req.body);
+
     if (!req.headers.authorization) {
       return res.status(403).send({
         message: "Sem autorização!",
@@ -90,7 +92,7 @@ module.exports = function (app) {
         data: {
           roomsId: room,
           message: message,
-          userId,
+          userId: decoded.id,
           artistId,
         },
       });
