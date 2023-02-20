@@ -3,13 +3,11 @@ require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 let bcrypt = require("bcryptjs"),
   jwt = require("jsonwebtoken");
-
 const prisma = new PrismaClient();
 
 module.exports = function (app) {
-  app.post("/chat/:room", async (req, res) => {
-    const { room } = req.params;
-    const { userId, artistId } = req.body;
+  app.post("/chat/messages", async (req, res) => {
+    const { userId, artistId, room } = req.body;
 
     if (!req.headers.authorization) {
       return res.status(403).send({
@@ -40,7 +38,7 @@ module.exports = function (app) {
   });
 
   app.post("/chat/createroom", async (req, res) => {
-    const { userId, artistId, message } = req.body;
+    const { artistId } = req.body;
 
     if (!req.headers.authorization) {
       return res.status(403).send({
@@ -54,13 +52,23 @@ module.exports = function (app) {
     );
 
     jwt.verify(newAuthorization, process.env.SECRET, async (err, decoded) => {
-      console.log(userId, artistId);
+      try {
+        const createRoom = await prisma.rooms.create({
+          data: {
+            userIdClient: decoded.id,
+            userIdArtist: artistId,
+          },
+        });
+
+        return res.json(createRoom);
+      } catch (error) {
+        return res.json(error);
+      }
     });
   });
 
-  app.post("/chat/:room/sendmessage", async (req, res) => {
-    const { room } = req.params;
-    const { userId, artistId, message } = req.body;
+  app.post("/chat/sendmessage", async (req, res) => {
+    const { userId, artistId, message, room } = req.body;
 
     if (!req.headers.authorization) {
       return res.status(403).send({

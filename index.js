@@ -15,14 +15,6 @@ var corsOption = {
   origin: "http://localhost:3000",
 };
 
-var http = require("http").createServer(app);
-
-http.listen(process.env.PORT || 3000, function () {
-  var host = http.address().address;
-  var port = http.address().port;
-  console.log("App listening at http://%s:%s", host, port);
-});
-
 app.use(cors(corsOption));
 app.use(express.json());
 
@@ -38,7 +30,7 @@ require("./src/routes/artists.routes")(app);
 require("./src/routes/buy.routes")(app);
 require("./src/routes/chat.routes")(app);
 
-app.get("/", async (req, res) => {
+app.post("/", async (req, res) => {
   res.json("OK");
 });
 
@@ -46,3 +38,7 @@ app.get("/sendArtists", async (req, res) => {
   sendArtists();
   res.json("OK");
 });
+
+const server = app.listen(3000, () =>
+  console.log(`🚀 Server ready at: http://localhost:3000`)
+);
