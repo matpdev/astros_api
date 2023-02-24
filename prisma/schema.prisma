@@ -14,6 +14,18 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  roleTypeId Int
+
+  RoleType RoleType   @relation(fields: [roleTypeId], references: [id])
+  Errors   Errors[]
+  Orders   Orders[]
+  Rooms    Rooms[]
+  Messages Messages[]
+}
+
+model UserData {
+  id Int @id @default(autoincrement())
+
   name         String?
   document     String?
   documentType String?
@@ -37,17 +49,17 @@ model User {
   integrationToken String?
   plataform        String?
 
+  artistId Int
+  Artist   Artist? @relation(fields: [artistId], references: [id])
+
   pagarmeId     String?
   houseCapacity Int?
 
-  roleType     RoleType   @relation(fields: [roleTypeId], references: [id])
-  errors       Errors[]
-  notification Boolean    @default(true)
-  artist       Artist?    @relation(fields: [artistId], references: [id])
-  artistId     Int?
-  orders       Orders[]
-  Rooms        Rooms[]
-  Messages     Messages[]
+  Errors   Errors[]
+  RoleType RoleType   @relation(fields: [roleTypeId], references: [id])
+  Orders   Orders[]
+  Messages Messages[]
+  Rooms    Rooms[]
 }
 
 model Artist {
@@ -61,8 +73,6 @@ model Artist {
   isAccepting  Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  type         Json
-  style        Json
   artistTypeId Int?
 
   instagramLink String?
@@ -77,14 +87,16 @@ model Artist {
   bank         String
   account_type String
 
-  dates       Dates[]
-  user        User[]
-  orders      Orders[]
-  extras      Extras[]
-  Rooms       Rooms[]
-  ArtistType  ArtistType? @relation(fields: [artistTypeId], references: [id])
-  styleTypeId StyleType[]
-  Messages    Messages[]
+  Dates Dates[]
+
+  Orders   Orders[]
+  Extras   Extras[]
+  Rooms    Rooms[]
+  Messages Messages[]
+  UserData UserData[]
+
+  ArtistStyle    ArtistStyle[]
+  ArtistBandType ArtistBandType[]
 }
 
 model ArtistType {
@@ -92,47 +104,59 @@ model ArtistType {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  artist    Artist[]
 }
 
-model StyleType {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  artist    Artist[]
+model ArtistStyle {
+  id       Int    @id @default(autoincrement())
+  artistId Int
+  artist   Artist @relation(fields: [artistId], references: [id])
+  style    Int
+  styles   Style  @relation(fields: [style], references: [id])
+}
+
+model ArtistBandType {
+  id       Int      @id @default(autoincrement())
+  artistId Int
+  artist   Artist   @relation(fields: [artistId], references: [id])
+  style    Int
+  bandType BandType @relation(fields: [style], references: [id])
+}
+
+model Style {
+  id          Int           @id @default(autoincrement())
+  name        String
+  ArtistStyle ArtistStyle[]
+}
+
+model BandType {
+  id             Int              @id @default(autoincrement())
+  name           String
+  ArtistBandType ArtistBandType[]
 }
 
 model Errors {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   errorCode Int
   message   String
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  UserD     UserData? @relation(fields: [userDId], references: [id])
+  userDId   Int?
 }
 
 model RoleType {
-  id   Int    @id @default(autoincrement())
-  name String
-  user User[]
+  id    Int        @id @default(autoincrement())
+  name  String
+  user  User[]
+  UserD UserData[]
 }
-
-// instrumentId Int
-// instrument   Instrument? @relation(fields: [instrumentId], references: [id])
 
 model Categories {
   id        Int      @id @default(autoincrement())
   name      String
   icon      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Style {
-  id        Int      @id @default(autoincrement())
-  name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -143,11 +167,9 @@ model Dates {
   hourMin String
   isFree  Boolean @default(true)
 
-  artist   Artist? @relation(fields: [artistId], references: [id])
+  Artist   Artist? @relation(fields: [artistId], references: [id])
   artistId Int?
 }
-
-//! Lembrar no sistema de Orders com Metodo de Pagamento
 
 model Orders {
   id             Int     @id @default(autoincrement())
@@ -161,8 +183,10 @@ model Orders {
 
   userId   Int
   artistId Int
-  user     User   @relation(fields: [userId], references: [id])
-  artist   Artist @relation(fields: [artistId], references: [id])
+  Artist   Artist    @relation(fields: [artistId], references: [id])
+  UserD    UserData? @relation(fields: [userDId], references: [id])
+  userDId  Int?
+  User     User      @relation(fields: [userId], references: [id])
 }
 
 enum Status {
@@ -188,9 +212,11 @@ model Messages {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User?   @relation(fields: [userId], references: [id])
-  artist Artist? @relation(fields: [artistId], references: [id])
-  rooms  Rooms   @relation(fields: [roomsId], references: [id])
+  user    User?     @relation(fields: [userId], references: [id])
+  artist  Artist?   @relation(fields: [artistId], references: [id])
+  rooms   Rooms     @relation(fields: [roomsId], references: [id])
+  UserD   UserData? @relation(fields: [userDId], references: [id])
+  userDId Int?
 }
 
 model Rooms {
@@ -202,4 +228,6 @@ model Rooms {
   user     User       @relation(fields: [userIdClient], references: [id])
   artist   Artist     @relation(fields: [userIdArtist], references: [id])
   messages Messages[]
+  UserD    UserData?  @relation(fields: [userDId], references: [id])
+  userDId  Int?
 }
