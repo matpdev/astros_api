@@ -7,7 +7,6 @@ const { calculateDistance, signUserInPagarme } = require("../utils/utils");
 const prisma = new PrismaClient(),
   nodemailer = require("nodemailer");
 
-const pagarme = require("pagarme");
 const { default: axios } = require("axios");
 
 const authorization = Buffer.from(
@@ -45,8 +44,7 @@ module.exports = function (app) {
       dates,
       extras,
       artistId,
-      lon,
-      lat,
+
       cardName,
       cardExpiration,
       cardCVV,
@@ -73,18 +71,31 @@ module.exports = function (app) {
         });
       }
 
-      const artist = await prisma.user.findUnique({
+      const artist = await prisma.artist.findFirst({
         where: {
           id: artistId,
         },
         include: {
-          artist: true,
+          User: true,
+          UserData: {
+            include: {
+              Address: true,
+            },
+          },
         },
       });
 
-      const userData = await prisma.user.findUnique({
+      const userData = await prisma.user.findFirst({
         where: {
-          id: decoded.id,
+          userLoginId: decoded.id,
+        },
+        include: {
+          UserData: {
+            include: {
+              Address: true,
+            },
+          },
+          UserLogin: true,
         },
       });
 
@@ -102,17 +113,47 @@ module.exports = function (app) {
 
       shippingVal = (
         calculateDistance({
-          lat1: lat,
-          long1: lon,
-          lat2: artist.lat,
-          long2: artist.long,
-        }) * artist.artist.transferFee
+          lat1: userData.UserData.Address[0].lat,
+          long1: userData.UserData.Address[0].long,
+          lat2: artist.UserData.Address[0].lat,
+          long2: artist.UserData.Address[0].long,
+        }) * artist.transferFee
       ).toFixed(2);
 
       let valueTotal =
-        Number(valueExtras) +
-        Number(shippingVal) +
-        Number(artist.artist.cacheMax);
+        Number(valueExtras) + Number(shippingVal) + Number(artist.cacheMax);
+
+      console.log({
+        items: [
+          {
+            amount: (valueTotal * 100).toString(),
+            description: artist.UserData.description,
+            quantity: 1,
+            code: artist.id.toString(),
+          },
+        ],
+        payments: [
+          {
+            Pix: { expires_in: 3500 },
+            // amount: (valueTotal * 100).toString(),
+            payment_method: "pix",
+          },
+        ],
+        customer: {
+          name: userData.UserLogin.name,
+          email: userData.UserLogin.email,
+          document: userData.document,
+          document_type: userData.documentType,
+          type: "individual",
+          phones: {
+            mobile_phone: {
+              country_code: "55",
+              area_code: "84",
+              number: "994633769",
+            },
+          },
+        },
+      });
 
       try {
         const data = await axios.post(
@@ -123,9 +164,9 @@ module.exports = function (app) {
                   items: [
                     {
                       amount: (valueTotal * 100).toString(),
-                      description: artist.description,
+                      description: artist.UserData.description,
                       quantity: 1,
-                      code: artist.artist.id.toString(),
+                      code: artist.id.toString(),
                     },
                   ],
                   payments: [
@@ -133,10 +174,10 @@ module.exports = function (app) {
                       credit_card: {
                         card: {
                           billing_address: {
-                            line_1: `${userData.number} - ${userData.address}`,
-                            zip_code: userData.zipcode,
-                            state: userData.state,
-                            city: userData.city,
+                            line_1: `${userData.UserData.Address[0].number} - ${userData.UserData.Address[0].address}`,
+                            zip_code: userData.UserData.Address[0].zipcode,
+                            state: userData.UserData.Address[0].state,
+                            city: userData.UserData.Address[0].city,
                             country: "br",
                           },
                           number: cardNumber,
@@ -151,21 +192,37 @@ module.exports = function (app) {
                       payment_method: "credit_card",
                     },
                   ],
-                  customer_id: userData.pagarmeId,
+                  customer: {
+                    name: userData.UserLogin.name,
+                    email: userData.UserLogin.email,
+                  },
                 }
               : {
+                  customer: {
+                    name: userData.UserLogin.name,
+                    email: userData.UserLogin.email,
+                    document: userData.document,
+                    document_type: userData.documentType,
+                    type: "individual",
+                    phones: {
+                      mobile_phone: {
+                        country_code: "55",
+                        area_code: "84",
+                        number: "994633769",
+                      },
+                    },
+                  },
                   items: [
                     {
-                      amount: (valueTotal * 100).toString(),
-                      description: artist.description,
+                      amount: valueTotal * 10,
+                      description: artist.UserData.description,
                       quantity: 1,
-                      code: artist.artist.id.toString(),
+                      code: artist.id.toString(),
                     },
                   ],
                   payments: [
-                    { Pix: { expires_in: 2000 }, payment_method: "pix" },
+                    { Pix: { expires_in: 3600 }, payment_method: "pix" },
                   ],
-                  customer_id: userData.pagarmeId,
                 }
           ),
           {
@@ -177,22 +234,37 @@ module.exports = function (app) {
           }
         );
 
-        await prisma.orders.create({
-          data: {
-            logGateway: data.data,
-            valueTotal,
-            dates,
-            status: "PENDENTE",
-            userId: decoded.id,
-            artistId: artist.artist.id,
-            orderPagarmeId: data.data.id,
-            codePagarme: data.data.code,
-          },
-        });
+        if (data.data.status != "failed") {
+          await prisma.orders.create({
+            data: {
+              logGateway: data.data,
+              valueTotal,
+              dates,
+              status: "PENDENTE",
+              userId: userData.id,
+              artistId: artist.id,
+              orderPagarmeId: data.data.id,
+              codePagarme: data.data.code,
+            },
+          });
 
-        return res.status(200).send("Pedido concluído com Sucesso");
+          return res.json(
+            type == "credit"
+              ? { status: "Pendente" }
+              : {
+                  status: "Pendente",
+                  qrCode: data.data.charges[0].last_transaction.qr_code,
+                }
+          );
+        } else {
+          return res.status(400).json({
+            Code: 400,
+            Message: "Ocorreu um erro na criação da Ordem de Pagamento",
+          });
+        }
       } catch (e) {
-        return res.status(400).json(e.response.data);
+        console.log(e.response.data.errors);
+        return res.status(400).json(e);
       }
     });
   });

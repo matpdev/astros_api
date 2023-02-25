@@ -4,13 +4,13 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 async function sendCategories() {
-  const haveItem = await prisma.categories.findUnique({
+  const haveItem = await prisma.bandType.findUnique({
     where: {
       id: 1,
     },
   });
   if (!haveItem) {
-    const userData = await prisma.categories.createMany({
+    const userData = await prisma.bandType.createMany({
       data: [
         {
           name: "Rock",

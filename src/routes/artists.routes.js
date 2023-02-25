@@ -18,8 +18,8 @@ module.exports = function (app) {
           cacheMin: true,
           rank: true,
           icon: true,
-          type: true,
-          style: true,
+          ArtistStyle: true,
+          ArtistBandType: true,
         },
       });
 
@@ -240,6 +240,7 @@ module.exports = function (app) {
 
   app.post("/artist/extra", async (req, res) => {
     const { name, value, description } = req.body;
+
     if (!req.headers.authorization) {
       return res.status(403).send({
         message: "Sem autorização!",

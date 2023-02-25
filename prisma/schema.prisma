@@ -7,73 +7,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String?  @unique
-  password  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model UserLogin {
+  id               Int       @id @default(autoincrement())
+  name             String?
+  email            String?   @unique
+  password         String?
+  phone            String?
+  integrationToken String?
+  plataform        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
 
   roleTypeId Int
+  RoleType   RoleType @relation(fields: [roleTypeId], references: [id])
+  Errors     Errors[]
+  Artist     Artist[]
+  User       User[]
+}
 
-  RoleType RoleType   @relation(fields: [roleTypeId], references: [id])
-  Errors   Errors[]
-  Orders   Orders[]
-  Rooms    Rooms[]
-  Messages Messages[]
+model User {
+  id           Int     @id @default(autoincrement())
+  document     String?
+  documentType String?
+  pagarmeId    String?
+
+  userDataId  Int
+  userLoginId Int?
+  Messages    Messages[]
+  Rooms       Rooms[]
+  UserData    UserData   @relation(fields: [userDataId], references: [id])
+  UserLogin   UserLogin? @relation(fields: [userLoginId], references: [id])
+  Orders      Orders[]
 }
 
 model UserData {
-  id Int @id @default(autoincrement())
-
-  name         String?
-  document     String?
-  documentType String?
-  birthDate    String?
-  description  String?
-  openingYear  String?
-  phone        String?
-  state        String?
-  city         String?
-  lat          Float?
-  long         Float?
-  district     String?
-  address      String?
-  number       String?
-  zipcode      String?
-  imageIcon    String?
-  gender       String?
-
-  roleTypeId       Int
-  deletedAt        DateTime?
-  integrationToken String?
-  plataform        String?
-
-  artistId Int
-  Artist   Artist? @relation(fields: [artistId], references: [id])
-
-  pagarmeId     String?
+  id            Int     @id @default(autoincrement())
+  birthDate     String?
+  description   String?
+  openingYear   String?
+  imageIcon     String?
+  gender        String?
   houseCapacity Int?
 
-  Errors   Errors[]
-  RoleType RoleType   @relation(fields: [roleTypeId], references: [id])
-  Orders   Orders[]
-  Messages Messages[]
-  Rooms    Rooms[]
+  Artist  Artist[]
+  User    User[]
+  Address Address[]
+}
+
+model Address {
+  id       Int      @id
+  UserData UserData @relation(fields: [id], references: [id])
+
+  lat      Float?
+  long     Float?
+  state    String?
+  city     String?
+  district String?
+  address  String?
+  number   String?
+  zipcode  String?
+
+  @@index([id])
 }
 
 model Artist {
-  id           Int      @id @default(autoincrement())
-  fantasyName  String?
-  transferFee  Float
-  cacheMin     Float
-  cacheMax     Float
-  rank         Float?
-  icon         String?
-  isAccepting  Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  artistTypeId Int?
+  id          Int      @id @default(autoincrement())
+  fantasyName String?
+  transferFee Float
+  cacheMin    Float
+  cacheMax    Float
+  rank        Float?
+  icon        String?
+  isAccepting Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   instagramLink String?
   facebookLink  String?
@@ -87,23 +95,29 @@ model Artist {
   bank         String
   account_type String
 
-  Dates Dates[]
+  userId       Int
+  userDataId   Int
+  artistTypeId Int?
 
+  pagarmeId String?
+
+  Dates    Dates[]
   Orders   Orders[]
   Extras   Extras[]
   Rooms    Rooms[]
   Messages Messages[]
-  UserData UserData[]
+  User     UserLogin  @relation(fields: [userId], references: [id])
+  UserData UserData   @relation(fields: [userDataId], references: [id])
 
   ArtistStyle    ArtistStyle[]
   ArtistBandType ArtistBandType[]
+  ArtistType     ArtistType?      @relation(fields: [artistTypeId], references: [id])
 }
 
 model ArtistType {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id     Int      @id @default(autoincrement())
+  name   String
+  Artist Artist[]
 }
 
 model ArtistStyle {
@@ -131,6 +145,7 @@ model Style {
 model BandType {
   id             Int              @id @default(autoincrement())
   name           String
+  icon           String
   ArtistBandType ArtistBandType[]
 }
 
@@ -139,18 +154,15 @@ model Errors {
   errorCode Int
   message   String
   userId    Int
-  user      User      @relation(fields: [userId], references: [id])
+  user      UserLogin @relation(fields: [userId], references: [id])
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  UserD     UserData? @relation(fields: [userDId], references: [id])
-  userDId   Int?
 }
 
 model RoleType {
-  id    Int        @id @default(autoincrement())
-  name  String
-  user  User[]
-  UserD UserData[]
+  id   Int         @id @default(autoincrement())
+  name String
+  user UserLogin[]
 }
 
 model Categories {
@@ -178,15 +190,13 @@ model Orders {
   valueTotal     Float
   dates          Json
   status         Status
+  artistId       Int
+  userId         Int
   orderPagarmeId String?
   codePagarme    String?
 
-  userId   Int
-  artistId Int
-  Artist   Artist    @relation(fields: [artistId], references: [id])
-  UserD    UserData? @relation(fields: [userDId], references: [id])
-  userDId  Int?
-  User     User      @relation(fields: [userId], references: [id])
+  User   User   @relation(fields: [userId], references: [id])
+  Artist Artist @relation(fields: [artistId], references: [id])
 }
 
 enum Status {
@@ -212,11 +222,9 @@ model Messages {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user    User?     @relation(fields: [userId], references: [id])
-  artist  Artist?   @relation(fields: [artistId], references: [id])
-  rooms   Rooms     @relation(fields: [roomsId], references: [id])
-  UserD   UserData? @relation(fields: [userDId], references: [id])
-  userDId Int?
+  user   User?   @relation(fields: [userId], references: [id])
+  artist Artist? @relation(fields: [artistId], references: [id])
+  rooms  Rooms   @relation(fields: [roomsId], references: [id])
 }
 
 model Rooms {
@@ -228,6 +236,4 @@ model Rooms {
   user     User       @relation(fields: [userIdClient], references: [id])
   artist   Artist     @relation(fields: [userIdArtist], references: [id])
   messages Messages[]
-  UserD    UserData?  @relation(fields: [userDId], references: [id])
-  userDId  Int?
 }
