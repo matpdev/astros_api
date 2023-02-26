@@ -29,6 +29,8 @@ require("./src/routes/profile.routes")(app);
 require("./src/routes/artists.routes")(app);
 require("./src/routes/buy.routes")(app);
 require("./src/routes/chat.routes")(app);
+require("./src/routes/categories.routes")(app);
+require("./src/routes/styles.routes")(app);
 
 app.post("/", async (req, res) => {
   res.json("OK");
