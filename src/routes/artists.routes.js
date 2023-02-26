@@ -18,8 +18,17 @@ module.exports = function (app) {
           cacheMin: true,
           rank: true,
           icon: true,
-          ArtistStyle: true,
-          ArtistBandType: true,
+          fantasyName: true,
+          ArtistStyle: {
+            include: {
+              styles: true,
+            },
+          },
+          ArtistBandType: {
+            include: {
+              bandType: true,
+            },
+          },
         },
       });
 
@@ -48,143 +57,141 @@ module.exports = function (app) {
     } = req.body;
 
     try {
-      let dataChanged = [];
       let artistsData = await prisma.artist.findMany({
         select: {
           id: true,
-          name: true,
-          description: true,
-          fantasyName: true,
           cacheMax: true,
           cacheMin: true,
-          lat: true,
-          long: true,
           rank: true,
-          city: true,
-          number: true,
-          address: true,
-          district: true,
-          uf: true,
           icon: true,
-          type: true,
-          style: true,
-          dates: {
-            select: {
-              date: true,
-              isFree: true,
-              hourMin: true,
+          fantasyName: true,
+          Dates: true,
+          UserData: {
+            include: {
+              Address: true,
+            },
+          },
+          ArtistStyle: {
+            include: {
+              styles: true,
+            },
+          },
+          ArtistBandType: {
+            include: {
+              bandType: true,
             },
           },
         },
       });
 
+      if (lat && long) {
+        artistsData = artistsData.map((x) => ({
+          ...x,
+          distance: calculateDistance({
+            lat1: lat,
+            long1: long,
+            lat2: x.UserData.Address[0].lat,
+            long2: x.UserData.Address[0].long,
+          }),
+        }));
+      }
+
+      if (city) {
+        artistsData = artistsData.filter(
+          (x) => x.UserData.Address[0].city == city && x
+        );
+      }
+
+      if (uf) {
+        artistsData = artistsData.filter(
+          (x) => x.UserData.Address[0].state == uf && x
+        );
+      }
+
       if (styles) {
-        dataChanged = [];
-        artistsData.map((x, i) => {
-          styles.map((y) => {
-            x.style.map((c) => {
-              if (c.id == y) {
-                dataChanged.push(x);
-              } else {
-                dataChanged.map((d, g) => {
-                  d.style.map((h) => {
-                    h.id != y && dataChanged.splice(g, 1);
-                  });
-                });
+        let data = [];
+        artistsData.filter((x) => {
+          x.ArtistStyle.map((y) => {
+            styles.map((j) => {
+              if (j == y.style) {
+                data.push(x);
               }
             });
           });
         });
 
-        artistsData = dataChanged;
+        artistsData = data;
       }
 
       if (categories) {
-        dataChanged = [];
-        artistsData.map((x) => {
-          categories.map((y) => {
-            x.type.map((c) => {
-              if (c.id == y) {
-                dataChanged.push(x);
-              } else {
-                dataChanged.map((d, g) => {
-                  d.type.map((h) => {
-                    h.id != y && dataChanged.splice(g, 1);
-                  });
-                });
+        let data = [];
+        artistsData.filter((x) => {
+          x.ArtistBandType.map((y) => {
+            categories.map((j) => {
+              if (j == y.style && x.ArtistBandType.length > 0) {
+                data.push(x);
               }
             });
           });
         });
 
-        artistsData = dataChanged;
+        artistsData = data;
       }
 
       if (dates) {
-        dataChanged = [];
+        let data = [];
         artistsData.map((x) => {
           dates.map((y) => {
-            x.dates.some((h) => {
-              h?.date == y && dataChanged.push(x);
+            x.Dates.map((h) => {
+              y == h.date && h.isFree == true && data.push(x);
             });
           });
         });
-        artistsData = dataChanged;
+        artistsData = data;
       }
 
-      if (hourStart && hourEnd) {
-        dataChanged = [];
+      if (search) {
+        artistsData = artistsData.filter((x) => {
+          return x.fantasyName
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .includes(
+              search
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+            );
+        });
+      }
+
+      if (sort) {
+        artistsData = artistsData.sort((a, b) =>
+          sort == 0
+            ? 0
+            : sort == 1
+            ? a.distance > b.distance
+              ? -1
+              : 1
+            : a.distance < b.distance
+            ? -1
+            : 1
+        );
+      }
+
+      if (hourStart) {
+        let dataChanged = [];
         artistsData.map((x) => {
-          moment(`2023-01-01 ${x.dates[0].hourMin}`) >=
-            moment(`2023-01-01 ${hourStart}`) &&
-            moment(`2023-01-01 ${x.dates[0].hourMin}`) <=
-              moment(`2023-01-01 ${hourEnd}`) &&
-            dataChanged.push(x);
+          moment(`2023-01-01 ${x.Dates[0].hourMin}`) >=
+            moment(`2023-01-01 ${hourStart}`) && dataChanged.push(x);
         });
         artistsData = dataChanged;
       }
 
-      return res.status(200).json(
-        artistsData
-          .filter((x) =>
-            x.name
-              .toLowerCase()
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "")
-              .includes(
-                search
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[\u0300-\u036f]/g, "")
-              )
-          )
-          .map((x) => ({
-            ...x,
-            distance: calculateDistance({
-              lat1: x.lat,
-              long1: x.long,
-              lat2: lat,
-              long2: long,
-            }),
-          }))
-          .filter((x) => (city ? x.city == city && x : x))
-          .filter((x) => (uf ? x.uf == uf && x : x))
-          .filter((x) =>
-            maxDistance != null && minDistance != null
-              ? x.distance >= minDistance && x.distance <= maxDistance && x
-              : x
-          )
-          .sort((a, b) =>
-            sort == 0
-              ? 0
-              : sort == 1
-              ? a.distance > b.distance
-                ? -1
-                : 1
-              : a.distance < b.distance
-              ? -1
-              : 1
-          )
+      return res.send(
+        artistsData.filter((x) => {
+          if (x.distance >= minDistance && x.distance <= maxDistance) return x;
+        })
       );
     } catch (e) {
       console.log(e);
@@ -208,29 +215,24 @@ module.exports = function (app) {
 
     try {
       jwt.verify(newAuthorization, process.env.SECRET, async (err, decoded) => {
-        const userData = await prisma.user.findUnique({
+        const userData = await prisma.artist.findFirst({
           where: {
-            id: decoded.id,
-          },
-          include: {
-            artist: true,
+            userId: decoded.id,
           },
         });
 
-        console.log(userData);
-
-        if (!!userData.artistId) {
+        if (!!userData) {
           await prisma.dates.create({
             data: {
               isFree,
               date: date,
               hourMin,
-              artistId: userData.artistId,
+              artistId: userData.id,
             },
           });
           res.send("Adicionado Com Sucesso");
         } else {
-          res.status(403).send("Sem Permissão");
+          res.status(403).json({ Code: 403, Message: "Sem Permissão" });
         }
       });
     } catch (e) {
@@ -259,22 +261,19 @@ module.exports = function (app) {
         });
       }
 
-      const artist = await prisma.user.findUnique({
+      const userData = await prisma.artist.findFirst({
         where: {
-          id: decoded.id,
-        },
-        include: {
-          artist: true,
+          userId: decoded.id,
         },
       });
 
-      if (artist.artist != null) {
+      if (userData) {
         await prisma.extras.create({
           data: {
             name,
             value,
             description,
-            artistId: artist.artistId,
+            artistId: userData.id,
           },
         });
 
@@ -344,14 +343,3 @@ module.exports = function (app) {
   //   }
   // });
 };
-
-// res.json({
-//   date,
-//   hourMin,
-//   mom: moment(date + " " + hourMin).isSameOrAfter(moment()),
-// });
-
-// um = new Date("2023-01-18 12:14:17")
-// um = new Date(Date.UTC(um.getFullYear(), um.getMonth(), um.getDate(), um.getHours(), um.getMinutes(), um.getSeconds()))
-
-// console.log(um.toLocaleString("pt-br", {timeZone: "America/Sao_Paulo"}))

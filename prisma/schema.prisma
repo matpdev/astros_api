@@ -32,13 +32,14 @@ model User {
   documentType String?
   pagarmeId    String?
 
-  userDataId  Int
-  userLoginId Int?
-  Messages    Messages[]
-  Rooms       Rooms[]
-  UserData    UserData   @relation(fields: [userDataId], references: [id])
-  UserLogin   UserLogin? @relation(fields: [userLoginId], references: [id])
-  Orders      Orders[]
+  userDataId     Int
+  userLoginId    Int?
+  Messages       Messages[]
+  Rooms          Rooms[]
+  UserData       UserData         @relation(fields: [userDataId], references: [id])
+  UserLogin      UserLogin?       @relation(fields: [userLoginId], references: [id])
+  Orders         Orders[]
+  StandByAproove StandByAproove[]
 }
 
 model UserData {
@@ -112,6 +113,7 @@ model Artist {
   ArtistStyle    ArtistStyle[]
   ArtistBandType ArtistBandType[]
   ArtistType     ArtistType?      @relation(fields: [artistTypeId], references: [id])
+  StandByAproove StandByAproove[]
 }
 
 model ArtistType {
@@ -195,11 +197,13 @@ model Orders {
   orderPagarmeId String?
   codePagarme    String?
 
-  User   User   @relation(fields: [userId], references: [id])
-  Artist Artist @relation(fields: [artistId], references: [id])
+  User           User             @relation(fields: [userId], references: [id])
+  Artist         Artist           @relation(fields: [artistId], references: [id])
+  StandByAproove StandByAproove[]
 }
 
 enum Status {
+  ESPERANDO
   PENDENTE
   APROVADO
 }
@@ -236,4 +240,22 @@ model Rooms {
   user     User       @relation(fields: [userIdClient], references: [id])
   artist   Artist     @relation(fields: [userIdArtist], references: [id])
   messages Messages[]
+}
+
+model StandByAproove {
+  id              Int           @id @default(autoincrement())
+  reasonRejection String?
+  status          StatusAproove
+  costumerId      Int
+  artistId        Int
+  orderId         Int
+  Artist          Artist        @relation(fields: [artistId], references: [id])
+  User            User          @relation(fields: [costumerId], references: [id])
+  Orders          Orders        @relation(fields: [orderId], references: [id])
+}
+
+enum StatusAproove {
+  PENDENTE
+  APROVADO
+  REJEITADO
 }

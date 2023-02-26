@@ -82,3 +82,11 @@ module.exports = {
   calculateDistance,
   signUserInPagarme,
 };
+
+/* 
+
+Usuário Compra -> Criado Solicitação de Aprovação por Parte do Artista cadastrado
+      -> Aprovado -> Continua processo de Pagamento do usuário
+      -> Cancelado/Rejeitado -> Retorno de Motivo para o Usuário
+
+*/

@@ -123,38 +123,6 @@ module.exports = function (app) {
       let valueTotal =
         Number(valueExtras) + Number(shippingVal) + Number(artist.cacheMax);
 
-      console.log({
-        items: [
-          {
-            amount: (valueTotal * 100).toString(),
-            description: artist.UserData.description,
-            quantity: 1,
-            code: artist.id.toString(),
-          },
-        ],
-        payments: [
-          {
-            Pix: { expires_in: 3500 },
-            // amount: (valueTotal * 100).toString(),
-            payment_method: "pix",
-          },
-        ],
-        customer: {
-          name: userData.UserLogin.name,
-          email: userData.UserLogin.email,
-          document: userData.document,
-          document_type: userData.documentType,
-          type: "individual",
-          phones: {
-            mobile_phone: {
-              country_code: "55",
-              area_code: "84",
-              number: "994633769",
-            },
-          },
-        },
-      });
-
       try {
         const data = await axios.post(
           "https://api.pagar.me/core/v5/orders",
