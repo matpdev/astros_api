@@ -213,6 +213,8 @@ module.exports = function (app) {
               artistId: artist.id,
               orderPagarmeId: data.data.id,
               codePagarme: data.data.code,
+              transferFee: parseFloat(shippingVal),
+              cacheTotal: artist.cacheMin,
             },
           });
 
@@ -231,7 +233,7 @@ module.exports = function (app) {
           });
         }
       } catch (e) {
-        console.log(e.response.data.errors);
+        console.log(e);
         return res.status(400).json(e);
       }
     });

@@ -160,17 +160,49 @@ module.exports = function (app) {
           message: "Sem autorização!",
         });
       }
-      const user = await prisma.user.findUnique({
+
+      const userExist = await prisma.userLogin.findUnique({
         where: {
           id: decoded.id,
         },
-        include: {
-          orders: true,
-        },
       });
 
-      if (user) {
-        return res.json(user.orders);
+      if (userExist) {
+        const user = await prisma.user.findFirst({
+          where: {
+            userLoginId: userExist.id,
+          },
+          include: {
+            Orders: {
+              include: {
+                Artist: true,
+              },
+            },
+          },
+        });
+
+        if (user) {
+          return res.json(user.Orders);
+        } else {
+          const userArtist = await prisma.artist.findFirst({
+            where: {
+              userId: userExist.id,
+            },
+            include: {
+              Orders: {
+                include: {
+                  Artist: true,
+                },
+              },
+            },
+          });
+
+          if (userArtist) {
+            return res.json(user.Orders);
+          } else {
+            return res.status(404).send("Usuário não encontrado");
+          }
+        }
       } else {
         return res.status(404).send("Usuário não encontrado");
       }

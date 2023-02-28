@@ -19,6 +19,7 @@ module.exports = function (app) {
           rank: true,
           icon: true,
           fantasyName: true,
+          transferFee: true,
           ArtistStyle: {
             include: {
               styles: true,
@@ -29,10 +30,29 @@ module.exports = function (app) {
               bandType: true,
             },
           },
+          UserData: {
+            include: {
+              Address: true,
+            },
+          },
         },
       });
 
-      return res.status(200).json(artistsData);
+      return res.status(200).json(
+        artistsData.map((e) => ({
+          id: e.id,
+          cacheMax: e.cacheMax,
+          cacheMin: e.cacheMin,
+          rank: e.rank,
+          icon: e.icon,
+          fantasyName: e.fantasyName,
+          ArtistStyle: e.ArtistStyle,
+          ArtistBandType: e.ArtistBandType,
+          city: e.UserData.Address[0].city,
+          distance: 0,
+          perKM: e.transferFee,
+        }))
+      );
     } catch (e) {
       console.log(e);
       return res.send(e);
@@ -319,6 +339,49 @@ module.exports = function (app) {
         return res.status(404).send("Artista não encontrado");
       }
     });
+  });
+
+  app.get("/artist/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      let artistsData = await prisma.artist.findUnique({
+        where: {
+          id: +id,
+        },
+        include: {
+          User: {
+            select: {
+              name: true,
+              email: true,
+              roleTypeId: true,
+            },
+          },
+          UserData: {
+            include: {
+              Address: true,
+            },
+          },
+          ArtistBandType: {
+            include: {
+              bandType: true,
+            },
+          },
+          ArtistStyle: {
+            include: {
+              styles: true,
+            },
+          },
+          ArtistType: true,
+          Dates: true,
+          Extras: true,
+        },
+      });
+
+      return res.json(artistsData);
+    } catch (e) {
+      console.log(e);
+      return res.status(400).json(e);
+    }
   });
 
   // app.get("/artists/contrast", async (req, res) => {

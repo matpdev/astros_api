@@ -33,7 +33,11 @@ module.exports = function (app) {
           },
         });
 
-        return res.json(userLogin);
+        var token = jwt.sign({ id: userLogin.id }, process.env.SECRET, {
+          expiresIn: 86400,
+        });
+
+        return res.json({ ...userLogin, jwt: token });
       } else {
         return res
           .status(409)
@@ -108,9 +112,14 @@ module.exports = function (app) {
                 userLoginId: userExist.id,
               },
               include: {
-                UserData: true,
+                UserData: {
+                  include: {
+                    Address: true,
+                  },
+                },
                 UserLogin: {
                   select: {
+                    name: true,
                     email: true,
                     id: true,
                     roleTypeId: true,
@@ -134,6 +143,8 @@ module.exports = function (app) {
                 },
                 select: {
                   id: true,
+                  document: true,
+                  documentType: true,
                   fantasyName: true,
                   transferFee: true,
                   cacheMin: true,
@@ -152,12 +163,19 @@ module.exports = function (app) {
                   spotifyLink: true,
                   websiteLink: true,
                   youtubeLink: true,
-                  UserData: true,
+                  UserData: {
+                    include: {
+                      Address: true,
+                    },
+                  },
                   User: {
                     select: {
+                      name: true,
                       email: true,
                       id: true,
                       roleTypeId: true,
+                      plataform: true,
+                      integrationToken: true,
                     },
                   },
                 },
@@ -169,6 +187,8 @@ module.exports = function (app) {
                 });
                 return res.status(200).send({
                   ...userData,
+                  UserLogin: userData.User,
+                  isArtist: true,
                   jwt: token,
                 });
               } else {
@@ -176,7 +196,13 @@ module.exports = function (app) {
                   expiresIn: 86400,
                 });
                 return res.status(200).send({
-                  ...userExist,
+                  id: userExist.id,
+                  name: userExist.name,
+                  email: userExist.email,
+                  phone: userExist.phone,
+                  integrationToken: userExist.integrationToken,
+                  plataform: userExist.plataform,
+                  roleTypeId: userExist.roleTypeId,
                   jwt: token,
                 });
               }
@@ -206,7 +232,11 @@ module.exports = function (app) {
               userLoginId: userExist.id,
             },
             include: {
-              UserData: true,
+              UserData: {
+                include: {
+                  Address: true,
+                },
+              },
               UserLogin: {
                 select: {
                   email: true,
@@ -252,7 +282,11 @@ module.exports = function (app) {
                 spotifyLink: true,
                 websiteLink: true,
                 youtubeLink: true,
-                UserData: true,
+                UserData: {
+                  include: {
+                    Address: true,
+                  },
+                },
                 User: {
                   select: {
                     email: true,

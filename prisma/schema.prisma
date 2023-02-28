@@ -73,16 +73,18 @@ model Address {
 }
 
 model Artist {
-  id          Int      @id @default(autoincrement())
-  fantasyName String?
-  transferFee Float
-  cacheMin    Float
-  cacheMax    Float
-  rank        Float?
-  icon        String?
-  isAccepting Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  document     String?
+  documentType String?
+  fantasyName  String?
+  transferFee  Float
+  cacheMin     Float
+  cacheMax     Float
+  rank         Float?
+  icon         String?
+  isAccepting  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   instagramLink String?
   facebookLink  String?
@@ -196,6 +198,8 @@ model Orders {
   userId         Int
   orderPagarmeId String?
   codePagarme    String?
+  cacheTotal     Float?
+  transferFee    Float?
 
   User           User             @relation(fields: [userId], references: [id])
   Artist         Artist           @relation(fields: [artistId], references: [id])
