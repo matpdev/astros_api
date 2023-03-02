@@ -45,8 +45,10 @@ module.exports = function (app) {
     });
   });
 
-  app.post("/user/artist", async (req, res) => {
+  app.post("/user/makeartist", async (req, res) => {
     const {
+      document,
+      documentType,
       description,
       fantasyName,
       transferFee,
@@ -68,6 +70,18 @@ module.exports = function (app) {
       websiteLink,
       youtubeLink,
       artistTypeId,
+      isAccepting,
+      state,
+      city,
+      district,
+      address,
+      number,
+      zipcode,
+      birthDate,
+      openingYear,
+      imageIcon,
+      gender,
+      houseCapacity,
     } = req.body;
 
     if (!req.headers.authorization) {
@@ -87,57 +101,205 @@ module.exports = function (app) {
           message: "Sem autorização!",
         });
       }
-      const user = await prisma.user.findUnique({
+      const artist = await prisma.artist.findFirst({
         where: {
-          id: decoded.id,
-        },
-        include: {
-          artist: true,
+          userId: decoded.id,
         },
       });
-      if (user.artist == null) {
-        const artistData = await prisma.artist.create({
+      if (!artist) {
+        const userData = await prisma.userData.create({
           data: {
-            transferFee,
-            cacheMin,
-            cacheMax,
-            icon,
-            type,
-            style,
-            artistTypeId: artistTypeId || 1,
-            account,
-            agency,
-            bank,
-            account_type,
+            birthDate,
+            description,
+            openingYear,
+            imageIcon,
+            gender,
+            houseCapacity: +houseCapacity,
           },
         });
 
-        const userData = await prisma.user.update({
-          where: {
-            id: decoded.id,
-          },
+        const addressData = await prisma.address.create({
           data: {
-            artistId: artistData.id,
+            id: userData.id,
+            lat: +lat,
+            long: +long,
+            state,
+            city,
+            district,
+            address,
+            number,
+            zipcode,
+          },
+        });
+
+        const artistData = await prisma.artist.create({
+          data: {
+            document,
+            documentType,
+            transferFee,
             fantasyName,
-            description,
-            lat,
-            long,
-            instagramLink,
             facebookLink,
+            instagramLink,
             tikTokLink,
             spotifyLink,
             websiteLink,
             youtubeLink,
-            roleTypeId: 2,
+            cacheMin,
+            cacheMax,
+            icon,
+            artistTypeId: artistTypeId,
+            account,
+            agency,
+            bank,
+            account_type,
+            userId: decoded.id,
+            userDataId: userData.id,
+            isAccepting,
           },
           include: {
-            artist: true,
+            User: {
+              select: {
+                email: true,
+                id: true,
+                roleTypeId: true,
+                phone: true,
+                name: true,
+              },
+            },
+            UserData: {
+              include: {
+                Address: true,
+              },
+            },
           },
         });
 
-        return res.json(userData);
+        if (style) {
+          for (let i = 0; i < style.length; i++) {
+            await prisma.artistStyle.create({
+              data: {
+                artistId: artistData.id,
+                style: style[i],
+              },
+            });
+          }
+        }
+
+        if (type) {
+          for (let i = 0; i < type.length; i++) {
+            await prisma.artistBandType.create({
+              data: {
+                artistId: artistData.id,
+                style: type[i],
+              },
+            });
+          }
+        }
+
+        return res.json(artistData);
       } else {
         res.status(401).json("Já é um artista");
+      }
+    });
+  });
+
+  app.post("/user/makeuser", async (req, res) => {
+    const {
+      document,
+      documentType,
+      birthDate,
+      description,
+      openingYear,
+      imageIcon,
+      gender,
+      houseCapacity,
+      lat,
+      long,
+      state,
+      city,
+      district,
+      address,
+      number,
+      zipcode,
+    } = req.body;
+
+    if (!req.headers.authorization) {
+      return res.status(403).send({
+        message: "Sem autorização!",
+      });
+    }
+
+    let newAuthorization = req.headers.authorization.substring(
+      7,
+      req.headers.authorization.length
+    );
+
+    jwt.verify(newAuthorization, process.env.SECRET, async (err, decoded) => {
+      if (err) {
+        return res.status(401).send({
+          message: "Sem autorização!",
+        });
+      }
+      const user = await prisma.user.findFirst({
+        where: {
+          userLoginId: decoded.id,
+        },
+      });
+
+      if (!user) {
+        const userData = await prisma.userData.create({
+          data: {
+            birthDate,
+            description,
+            openingYear,
+            imageIcon,
+            gender,
+            houseCapacity: +houseCapacity,
+          },
+        });
+
+        const addressData = await prisma.address.create({
+          data: {
+            id: userData.id,
+            lat: +lat,
+            long: +long,
+            state,
+            city,
+            district,
+            address,
+            number,
+            zipcode,
+          },
+        });
+
+        const user = await prisma.user.create({
+          data: {
+            document,
+            documentType,
+            userLoginId: decoded.id,
+            userDataId: userData.id,
+          },
+          include: {
+            UserData: {
+              include: {
+                Address: true,
+              },
+            },
+            UserLogin: {
+              select: {
+                email: true,
+                id: true,
+                roleTypeId: true,
+                phone: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        return res.json(user);
+      } else {
+        res.status(401).json("Já é um usuário");
       }
     });
   });
@@ -243,7 +405,7 @@ module.exports = function (app) {
     });
   });
 
-  app.get("/user/", async (req, res) => {
+  app.get("/user", async (req, res) => {
     if (!req.headers.authorization) {
       return res.status(403).send({
         message: "Sem autorização!",
@@ -320,6 +482,58 @@ module.exports = function (app) {
         return res
           .status(200)
           .json({ Message: "Usuário não encontrado", Code: "404" });
+      }
+    });
+  });
+
+  app.post("/favorite", async (req, res) => {
+    const { isFavorited, favoriteId, artistId } = req.body;
+
+    if (!req.headers.authorization) {
+      return res.status(403).send({
+        message: "Sem autorização!",
+      });
+    }
+
+    let newAuthorization = req.headers.authorization.substring(
+      7,
+      req.headers.authorization.length
+    );
+
+    jwt.verify(newAuthorization, process.env.SECRET, async (err, decoded) => {
+      if (err) {
+        return res.status(401).send({
+          message: "Sem autorização!",
+        });
+      }
+
+      const userExist = await prisma.userLogin.findUnique({
+        where: {
+          id: decoded.id,
+        },
+      });
+
+      if (userExist) {
+        const favoriteData = await prisma.favorites.upsert({
+          where: {
+            id: +favoriteId,
+          },
+          create: {
+            artistFavoritedId: artistId,
+            userId: decoded.id,
+            isFavorited: isFavorited || true,
+          },
+          update: {
+            isFavorited: !!isFavorited,
+          },
+          include: {
+            Artist: true,
+          },
+        });
+
+        return res.json(favoriteData);
+      } else {
+        return res.json();
       }
     });
   });
