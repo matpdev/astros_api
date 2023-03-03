@@ -59,24 +59,29 @@ module.exports = function (app) {
       icon,
       type,
       style,
+
       account,
       agency,
       bank,
       account_type,
+
       instagramLink,
       facebookLink,
       tikTokLink,
       spotifyLink,
       websiteLink,
       youtubeLink,
+
       artistTypeId,
       isAccepting,
+
       state,
       city,
       district,
       address,
       number,
       zipcode,
+
       birthDate,
       openingYear,
       imageIcon,
@@ -136,7 +141,7 @@ module.exports = function (app) {
           data: {
             document,
             documentType,
-            transferFee,
+            transferFee: +transferFee,
             fantasyName,
             facebookLink,
             instagramLink,
@@ -144,8 +149,8 @@ module.exports = function (app) {
             spotifyLink,
             websiteLink,
             youtubeLink,
-            cacheMin,
-            cacheMax,
+            cacheMin: +cacheMin,
+            cacheMax: +cacheMax,
             icon,
             artistTypeId: artistTypeId,
             account,
@@ -154,7 +159,7 @@ module.exports = function (app) {
             account_type,
             userId: decoded.id,
             userDataId: userData.id,
-            isAccepting,
+            isAccepting: true,
           },
           include: {
             User: {
@@ -196,9 +201,13 @@ module.exports = function (app) {
           }
         }
 
-        return res.json(artistData);
+        var token = jwt.sign({ id: decoded.id }, process.env.SECRET, {
+          expiresIn: 86400,
+        });
+
+        return res.json({ ...artistData, jwt: token });
       } else {
-        res.status(401).json("Já é um artista");
+        res.status(401).json({ Code: 401, Message: "Já é um artista" });
       }
     });
   });
@@ -297,9 +306,13 @@ module.exports = function (app) {
           },
         });
 
-        return res.json(user);
+        var token = jwt.sign({ id: decoded.id }, process.env.SECRET, {
+          expiresIn: 86400,
+        });
+
+        return res.json({ ...user, jwt: token });
       } else {
-        res.status(401).json("Já é um usuário");
+        res.status(401).json({ Code: 401, Message: "Já é um usuário" });
       }
     });
   });
