@@ -7,10 +7,6 @@ const { signUserInPagarme } = require("../utils/utils");
 const prisma = new PrismaClient();
 const moment = require("moment");
 
-const authorization = Buffer.from(
-  `${process.env.PAGARME_TEST_TOKEN}:`
-).toString("base64");
-
 module.exports = function (app) {
   app.post(`/signup`, async (req, res) => {
     const { email, password, name, phone } = req.body;
@@ -122,6 +118,7 @@ module.exports = function (app) {
                     name: true,
                     email: true,
                     id: true,
+                    phone: true,
                     roleTypeId: true,
                   },
                 },
@@ -173,6 +170,7 @@ module.exports = function (app) {
                       name: true,
                       email: true,
                       id: true,
+                      phone: true,
                       roleTypeId: true,
                       plataform: true,
                       integrationToken: true,
@@ -321,174 +319,3 @@ module.exports = function (app) {
     }
   });
 };
-
-/* 
-app.post(`/signup`, async (req, res) => {
-    const {
-      email,
-      password,
-      name,
-      document,
-      birthDate,
-      description,
-      openingYear,
-      phone,
-      state,
-      city,
-      lat,
-      long,
-      district,
-      address,
-      number,
-      zipcode,
-      imageIcon,
-      instagramLink,
-      facebookLink,
-      tikTokLink,
-      spotifyLink,
-      websiteLink,
-      youtubeLink,
-      houseCapacity,
-
-      isArtist,
-      transferFee,
-      cacheMin,
-      cacheMax,
-      rank,
-      icon,
-      isAccepting,
-      createdAt,
-      updatedAt,
-      fantasyName,
-      type,
-      style,
-      artistTypeId,
-      account,
-      agency,
-      bank,
-      account_type,
-      gender,
-      documentType,
-    } = req.body;
-
-    try {
-      const userData = await prisma.userLogin.findFirst({
-        where: {
-          email,
-        },
-      });
-
-      if (!userData) {
-        const userLogin = await prisma.userLogin.create({
-          data: {
-            email,
-            password: bcrypt.hashSync(password, 10),
-            roleTypeId: 1,
-          },
-        });
-
-        const userData = await prisma.userData.create({
-          data: {
-            birthDate,
-            description,
-            openingYear,
-            imageIcon,
-            gender,
-            houseCapacity,
-          },
-        });
-
-        await prisma.address.create({
-          data: {
-            id: userData.id,
-            lat,
-            long,
-            state,
-            city,
-            district,
-            address,
-            number,
-            zipcode,
-          },
-        });
-
-        if (!isArtist) {
-          const user = await prisma.user.create({
-            data: {
-              name,
-              document,
-              documentType,
-              phone,
-              userDataId: userData.id,
-              userLoginId: userLogin.id,
-            },
-            include: {
-              UserData: true,
-              UserLogin: true,
-            },
-          });
-
-          return res.json(user);
-        } else {
-          const user = await prisma.artist.create({
-            data: {
-              fantasyName,
-              transferFee,
-              cacheMin,
-              cacheMax,
-              rank,
-              icon,
-              isAccepting,
-              createdAt,
-              updatedAt,
-              instagramLink,
-              facebookLink,
-              tikTokLink,
-              spotifyLink,
-              websiteLink,
-              youtubeLink,
-              account,
-              agency,
-              bank,
-              account_type,
-              userId: userLogin.id,
-              userDataId: userData.id,
-              artistTypeId: 1,
-            },
-          });
-
-          if (style) {
-            for (let i = 0; i < style.length; i++) {
-              await prisma.artistStyle.create({
-                data: {
-                  artistId: user.id,
-                  style: style[i],
-                },
-              });
-            }
-          }
-
-          if (type) {
-            for (let i = 0; i < style.length; i++) {
-              await prisma.artistBandType.create({
-                data: {
-                  artistId: user.id,
-                  style: style[i],
-                },
-              });
-            }
-          }
-
-          return res.json(user);
-        }
-      } else {
-        return res
-          .status(409)
-          .json({ Code: 409, Message: "Usuário Já Existe" });
-      }
-    } catch (error) {
-      console.log(error);
-      return res.status(400).json("Ocorreu um erro interno");
-    }
-  });
-*/

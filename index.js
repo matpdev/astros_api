@@ -7,6 +7,8 @@ const { sendRoles } = require("./src/automation/sendRoles");
 const { sendArtists } = require("./src/automation/sendArtists");
 const { sendStyles } = require("./src/automation/sendStyles");
 const { sendTypeArtists } = require("./src/automation/sendTypeArtists");
+const bodyParser = require("body-parser");
+const ExpressFormidable = require("express-formidable");
 
 const prisma = new PrismaClient();
 const app = express();
@@ -16,7 +18,8 @@ var corsOption = {
 };
 
 app.use(cors(corsOption));
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 sendRoles();
 sendCategories();
@@ -24,8 +27,8 @@ sendStyles();
 sendTypeArtists();
 
 require("./src/routes/auth.routes")(app);
-require("./src/routes/user.routes")(app);
 require("./src/routes/profile.routes")(app);
+require("./src/routes/user.routes")(app);
 require("./src/routes/artists.routes")(app);
 require("./src/routes/buy.routes")(app);
 require("./src/routes/chat.routes")(app);
