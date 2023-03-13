@@ -329,12 +329,12 @@ module.exports = function (app) {
           id: +id,
         },
         include: {
-          extras: true,
+          Extras: true,
         },
       });
 
-      if (artist?.extras) {
-        return res.json(artist.extras);
+      if (artist?.Extras) {
+        return res.json(artist.Extras);
       } else {
         return res.status(404).send("Artista não encontrado");
       }

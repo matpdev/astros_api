@@ -1,8 +1,8 @@
 const { StorageClient } = require("@supabase/storage-js");
 
-const STORAGE_URL = "https://ahcdgbavrhtcenpncmmx.supabase.co/storage/v1";
+const STORAGE_URL = "https://xgjahiyquzsfpqisbwwm.supabase.co/storage/v1";
 const SERVICE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoY2RnYmF2cmh0Y2VucG5jbW14Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY3Mzg5NzA5NiwiZXhwIjoxOTg5NDczMDk2fQ.h5ekdNdurY5UbgV3RKzHlyDQySwhElO5d3xqmta5N0E";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnamFoaXlxdXpzZnBxaXNid3dtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY3ODY0Njg5NSwiZXhwIjoxOTk0MjIyODk1fQ.BZ6QvdJCoi1SzS296Kp5XUqCW5Y-PO_CauV2kdvmL40";
 
 const storageClient = new StorageClient(STORAGE_URL, {
   apikey: SERVICE_KEY,

@@ -207,7 +207,6 @@ module.exports = function (app) {
             data: {
               logGateway: data.data,
               valueTotal,
-              dates,
               status: "PENDENTE",
               userId: userData.id,
               artistId: artist.id,
@@ -236,6 +235,69 @@ module.exports = function (app) {
         console.log(e);
         return res.status(400).json(e);
       }
+    });
+  });
+
+  app.post("/payment/checktranfer", async (req, res) => {
+    const { artistId } = req.body;
+
+    if (!req.headers.authorization) {
+      return res.status(403).send({
+        message: "Sem autorização!",
+      });
+    }
+
+    let newAuthorization = req.headers.authorization.substring(
+      7,
+      req.headers.authorization.length
+    );
+
+    jwt.verify(newAuthorization, process.env.SECRET, async (err, decoded) => {
+      if (err) {
+        return res.status(401).send({
+          message: "Sem autorização!",
+        });
+      }
+
+      const artist = await prisma.artist.findFirst({
+        where: {
+          id: +artistId,
+        },
+        include: {
+          User: true,
+          UserData: {
+            include: {
+              Address: true,
+            },
+          },
+        },
+      });
+
+      const userData = await prisma.user.findFirst({
+        where: {
+          userLoginId: decoded.id,
+        },
+        include: {
+          UserData: {
+            include: {
+              Address: true,
+            },
+          },
+          UserLogin: true,
+        },
+      });
+
+      let shippingVal = 0;
+
+      shippingVal =
+        calculateDistance({
+          lat1: userData.UserData.Address[0].lat,
+          long1: userData.UserData.Address[0].long,
+          lat2: artist.UserData.Address[0].lat,
+          long2: artist.UserData.Address[0].long,
+        }) * artist.transferFee;
+
+      return res.json(shippingVal);
     });
   });
 };

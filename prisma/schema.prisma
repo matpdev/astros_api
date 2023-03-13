@@ -194,7 +194,6 @@ model Orders {
   logGateway     Json
   voucherId      Int?
   valueTotal     Float
-  dates          Json
   status         Status
   artistId       Int
   userId         Int
@@ -203,9 +202,26 @@ model Orders {
   cacheTotal     Float?
   transferFee    Float?
 
-  User           User             @relation(fields: [userId], references: [id])
-  Artist         Artist           @relation(fields: [artistId], references: [id])
-  StandByAproove StandByAproove[]
+  User              User                @relation(fields: [userId], references: [id])
+  Artist            Artist              @relation(fields: [artistId], references: [id])
+  StandByAproove    StandByAproove[]
+  UserDataContrated UserDataContrated[]
+}
+
+model UserDataContrated {
+  id           Int           @id @default(autoincrement())
+  orderId      Int
+  Orders       Orders        @relation(fields: [orderId], references: [id])
+  dateId       Int
+  dateSelected DatesSelected @relation(fields: [dateId], references: [id])
+}
+
+model DatesSelected {
+  id                Int                 @id @default(autoincrement())
+  hourMin           String
+  hourMax           String
+  date              String
+  UserDataContrated UserDataContrated[]
 }
 
 enum Status {

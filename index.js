@@ -34,6 +34,7 @@ require("./src/routes/buy.routes")(app);
 require("./src/routes/chat.routes")(app);
 require("./src/routes/categories.routes")(app);
 require("./src/routes/styles.routes")(app);
+require("./src/routes/user_photo.routes")(app);
 
 app.post("/", async (req, res) => {
   res.json("OK");
